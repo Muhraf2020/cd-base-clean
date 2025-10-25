@@ -2,18 +2,24 @@
 // export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
+
+// app/clinics/[id]/page.tsx
 import { createSupabaseClient } from '@/lib/supabase';
 import { Clinic } from '@/lib/dataTypes';
 import Link from 'next/link';
 import ClinicBanner from '@/components/ClinicBanner';
 import { notFound } from 'next/navigation';
 
-// Props
+
+
+// ----------------------
+// 1. Updated for Next.js 15 - params is now a Promise
 interface ClinicPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
+// ----------------------
 
 // Server-side data fetching
 async function getClinic(id: string): Promise<Clinic | null> {
@@ -32,11 +38,15 @@ async function getClinic(id: string): Promise<Clinic | null> {
   return data as Clinic;
 }
 
+// ----------------------
+// 2. Await the params promise before using
 export default async function ClinicDetailPage({ params }: ClinicPageProps) {
-  const { id } = params;
+  // CRITICAL: Await params in Next.js 15+
+  const { id } = await params;
+// ----------------------
 
   const clinic = await getClinic(id);
-
+  
   if (!clinic) {
     notFound();
   }
@@ -78,9 +88,7 @@ export default async function ClinicDetailPage({ params }: ClinicPageProps) {
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">
                     {clinic.display_name}
                   </h1>
-                  <p className="text-gray-600">
-                    {clinic.primary_type?.replace(/_/g, ' ')}
-                  </p>
+                  <p className="text-gray-600">{clinic.primary_type?.replace(/_/g, ' ')}</p>
                 </div>
 
                 {clinic.current_open_now !== undefined && (
@@ -240,16 +248,14 @@ export default async function ClinicDetailPage({ params }: ClinicPageProps) {
                   </a>
                 )}
 
-                {clinic.google_maps_uri && (
-                  <a
-                    href={clinic.google_maps_uri}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full text-center px-4 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    📍 Get Directions
-                  </a>
-                )}
+                <a
+                  href={clinic.google_maps_uri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full text-center px-4 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  📍 Get Directions
+                </a>
 
                 {clinic.website && (
                   <a
