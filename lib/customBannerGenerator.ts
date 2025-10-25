@@ -35,6 +35,9 @@ export function generateCustomBanner(
   // Get pattern based on theme
   const pattern = getPattern(theme.pattern, color1);
 
+  // Truncate long names
+  const displayName = truncateText(clinicName, 40);
+
   const svg = `
     <svg width="1600" height="400" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -43,6 +46,19 @@ export function generateCustomBanner(
           <stop offset="100%" style="stop-color:${color2};stop-opacity:0.95" />
         </linearGradient>
         ${pattern}
+        
+        <!-- Shadow filter for depth -->
+        <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+          <feOffset dx="0" dy="2" result="offsetblur"/>
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="0.3"/>
+          </feComponentTransfer>
+          <feMerge>
+            <feMergeNode/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
       </defs>
       
       <!-- Background gradient -->
@@ -51,52 +67,81 @@ export function generateCustomBanner(
       <!-- Pattern overlay -->
       <rect width="1600" height="400" fill="url(#pattern)" opacity="0.1" />
       
-      <!-- Content container -->
-      <g transform="translate(80, 200)">
+      <!-- Center content container -->
+      <g transform="translate(800, 200)">
         ${faviconUrl ? `
-          <!-- Favicon circle background -->
-          <circle cx="40" cy="0" r="48" fill="white" opacity="0.2" />
-          <circle cx="40" cy="0" r="42" fill="white" />
+          <!-- Favicon circle with shadow -->
+          <circle cx="0" cy="-30" r="52" fill="rgba(0,0,0,0.1)" />
+          <circle cx="0" cy="-32" r="52" fill="rgba(255,255,255,0.2)" />
+          <circle cx="0" cy="-32" r="46" fill="white" filter="url(#shadow)" />
           
           <!-- Favicon placeholder (if loading fails) -->
-          <text x="40" y="10" text-anchor="middle" 
-                font-family="Arial, sans-serif" font-size="36" fill="${color1}">
+          <text x="0" y="-20" text-anchor="middle" 
+                font-family="Arial, sans-serif" font-size="40" fill="${color1}">
             🏥
           </text>
         ` : `
-          <!-- Default medical icon -->
-          <circle cx="40" cy="0" r="48" fill="white" opacity="0.2" />
-          <circle cx="40" cy="0" r="42" fill="white" />
-          <text x="40" y="10" text-anchor="middle" 
-                font-family="Arial, sans-serif" font-size="36">
+          <!-- Default medical icon with shadow -->
+          <circle cx="0" cy="-30" r="52" fill="rgba(0,0,0,0.1)" />
+          <circle cx="0" cy="-32" r="52" fill="rgba(255,255,255,0.2)" />
+          <circle cx="0" cy="-32" r="46" fill="white" filter="url(#shadow)" />
+          <text x="0" y="-20" text-anchor="middle" 
+                font-family="Arial, sans-serif" font-size="40">
             🏥
           </text>
         `}
         
-        <!-- Clinic name -->
-        <text x="120" y="10" 
+        <!-- Clinic name - centered -->
+        <text x="0" y="50" 
+              text-anchor="middle"
               font-family="Arial, Helvetica, sans-serif" 
-              font-size="56" 
+              font-size="52" 
               font-weight="bold" 
               fill="white"
-              text-anchor="start">
-          ${escapeXml(truncateText(clinicName, 35))}
+              filter="url(#shadow)">
+          ${escapeXml(displayName)}
         </text>
         
         ${rating ? `
-          <!-- Rating badge -->
-          <g transform="translate(120, 50)">
-            <rect x="0" y="0" width="120" height="36" rx="18" fill="white" opacity="0.95" />
-            <text x="18" y="24" font-family="Arial, sans-serif" font-size="20" fill="#fbbf24">★</text>
-            <text x="45" y="24" font-family="Arial, sans-serif" font-size="20" font-weight="600" fill="${color1}">
+          <!-- Rating badge - centered -->
+          <g transform="translate(0, 90)">
+            <!-- Badge background with shadow -->
+            <rect x="-65" y="-2" width="130" height="40" rx="20" 
+                  fill="rgba(0,0,0,0.1)" />
+            <rect x="-65" y="-4" width="130" height="40" rx="20" 
+                  fill="white" opacity="0.95" filter="url(#shadow)" />
+            
+            <!-- Star icon -->
+            <text x="-35" y="22" 
+                  font-family="Arial, sans-serif" 
+                  font-size="22" 
+                  fill="#fbbf24">★</text>
+            
+            <!-- Rating number -->
+            <text x="0" y="22" 
+                  text-anchor="middle"
+                  font-family="Arial, sans-serif" 
+                  font-size="22" 
+                  font-weight="600" 
+                  fill="${color1}">
               ${rating.toFixed(1)}
             </text>
           </g>
         ` : ''}
       </g>
       
-      <!-- Bottom accent line -->
-      <rect x="0" y="390" width="1600" height="10" fill="white" opacity="0.2" />
+      <!-- Decorative accent lines -->
+      <rect x="0" y="0" width="1600" height="4" fill="white" opacity="0.1" />
+      <rect x="0" y="396" width="1600" height="4" fill="white" opacity="0.2" />
+      
+      <!-- Bottom gradient overlay -->
+      <defs>
+        <linearGradient id="bottomFade" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:black;stop-opacity:0" />
+          <stop offset="100%" style="stop-color:black;stop-opacity:0.2" />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="300" width="1600" height="100" fill="url(#bottomFade)" />
     </svg>
   `;
 
