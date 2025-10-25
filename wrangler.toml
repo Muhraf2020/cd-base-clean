@@ -4,5 +4,22 @@ pages_build_output_dir = ".open-next"
 compatibility_date = "2025-05-05"
 compatibility_flags = ["nodejs_compat"]
 
+# Cache rules for better performance
+[[rules]]
+type = "CacheSettings"
+match = "*/api/stats*"
+cache_level = "cache_everything"
+edge_cache_ttl = 3600
 
-# .nvmrc controls the Node version; no NODE_VERSION set here.
+[[rules]]
+type = "CacheSettings"
+match = "*/api/clinics*"
+cache_level = "cache_everything"
+edge_cache_ttl = 300
+
+# Compress responses
+[build]
+command = "npm run pages:build"
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
