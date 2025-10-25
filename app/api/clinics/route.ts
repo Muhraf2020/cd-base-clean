@@ -1,4 +1,4 @@
-// Use Node runtime on Cloudflare; edge runtime is not supported by default:contentReference[oaicite:1]{index=1}.
+// Use Node runtime on Cloudflare; edge runtime is not supported by default
 // export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
@@ -7,6 +7,13 @@ import { NextResponse } from 'next/server';
 import { createSupabaseClient } from '@/lib/supabase';
 
 import { Clinic } from '@/lib/dataTypes';
+
+// ✅ Valid US states for filtering
+const VALID_US_STATES = new Set([
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA',
+  'ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK',
+  'OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'
+]);
 
 // US State to Timezone mapping
 const STATE_TIMEZONES: Record<string, string> = {
@@ -160,7 +167,7 @@ function calculateOpenNowFromWeekdayText(
 
 /**
  * GET /api/clinics
- * Fetches all clinics from Supabase
+ * Fetches all clinics from Supabase (US-only)
  */
 export async function GET(request: Request) {
   // ✅ Initialize Supabase client INSIDE the function (Edge/Workers-safe)
@@ -176,6 +183,9 @@ export async function GET(request: Request) {
     let query = supabase
       .from('clinics')
       .select('*', { count: 'exact' });
+
+    // ✅ Always filter to valid US states at the database level
+    query = query.in('state_code', Array.from(VALID_US_STATES));
 
     // Filter by state
     if (state) {
@@ -199,12 +209,17 @@ export async function GET(request: Request) {
       throw error;
     }
 
-    // Transform all clinics to match frontend expectations
-    const transformedClinics = (data || []).map(transformClinicData);
+    // ✅ Additional client-side filter as defense-in-depth
+    const usClinics = (data || []).filter(clinic => 
+      clinic.state_code && VALID_US_STATES.has(clinic.state_code)
+    );
+
+    // Transform all US clinics to match frontend expectations
+    const transformedClinics = usClinics.map(transformClinicData);
 
     return NextResponse.json({
       clinics: transformedClinics,
-      total: count || 0,
+      total: count || 0, // Database count already filtered by US states
       page,
       per_page: perPage,
     });
