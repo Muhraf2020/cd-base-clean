@@ -9,22 +9,6 @@ interface StateInfo {
   clinicCount: number;
 }
 
-const US_STATES_FULL: Record<string, string> = {
-  'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
-  'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
-  'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho',
-  'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas',
-  'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
-  'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
-  'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
-  'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
-  'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma',
-  'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
-  'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
-  'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia',
-  'WI': 'Wisconsin', 'WY': 'Wyoming', 'DC': 'Washington DC'
-};
-
 export default function StateGrid() {
   const [states, setStates] = useState<StateInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,23 +20,11 @@ export default function StateGrid() {
   const loadStateCounts = async () => {
     try {
       setLoading(true);
-      const stateCounts: StateInfo[] = [];
+      // Single API call instead of 50+!
+      const response = await fetch('/api/stats');
+      const data = await response.json();
       
-      for (const [code, name] of Object.entries(US_STATES_FULL)) {
-        const response = await fetch(`/api/clinics?state=${code}&per_page=1`);
-        const data = await response.json();
-        
-        if (data.total > 0) {
-          stateCounts.push({
-            code,
-            name,
-            clinicCount: data.total
-          });
-        }
-      }
-
-      stateCounts.sort((a, b) => b.clinicCount - a.clinicCount);
-      setStates(stateCounts);
+      setStates(data.states || []);
     } catch (error) {
       console.error('Error loading state counts:', error);
     } finally {
