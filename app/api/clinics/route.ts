@@ -223,12 +223,21 @@ export async function GET(request: Request) {
     // Transform all US clinics to match frontend expectations
     const transformedClinics = usClinics.map(transformClinicData);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       clinics: transformedClinics,
-      total: count || 0, // Database count already filtered by US states
+      total: count || 0,
       page,
       per_page: perPage,
     });
+
+    // Add Cloudflare caching headers
+    // Cache for 5 minutes, stale-while-revalidate for 1 hour
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=300');
+    response.headers.set('Cloudflare-CDN-Cache-Control', 'public, max-age=300');
+
+    return response;
+    
   } catch (error) {
     console.error('Error in clinics API:', error);
     return NextResponse.json(
