@@ -2,24 +2,18 @@
 // export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-
-// app/clinics/[id]/page.tsx
 import { createSupabaseClient } from '@/lib/supabase';
 import { Clinic } from '@/lib/dataTypes';
 import Link from 'next/link';
 import ClinicBanner from '@/components/ClinicBanner';
 import { notFound } from 'next/navigation';
 
-
-
-// ----------------------
-// 1. Updated for Next.js 15 - params is now a Promise
+// Props
 interface ClinicPageProps {
-  params: Promise<{
+  params: {
     id: string;
-  }>;
+  };
 }
-// ----------------------
 
 // Server-side data fetching
 async function getClinic(id: string): Promise<Clinic | null> {
@@ -38,15 +32,11 @@ async function getClinic(id: string): Promise<Clinic | null> {
   return data as Clinic;
 }
 
-// ----------------------
-// 2. Await the params promise before using
 export default async function ClinicDetailPage({ params }: ClinicPageProps) {
-  // CRITICAL: Await params in Next.js 15+
-  const { id } = await params;
-// ----------------------
+  const { id } = params;
 
   const clinic = await getClinic(id);
-  
+
   if (!clinic) {
     notFound();
   }
@@ -88,7 +78,9 @@ export default async function ClinicDetailPage({ params }: ClinicPageProps) {
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">
                     {clinic.display_name}
                   </h1>
-                  <p className="text-gray-600">{clinic.primary_type?.replace(/_/g, ' ')}</p>
+                  <p className="text-gray-600">
+                    {clinic.primary_type?.replace(/_/g, ' ')}
+                  </p>
                 </div>
 
                 {clinic.current_open_now !== undefined && (
@@ -213,7 +205,7 @@ export default async function ClinicDetailPage({ params }: ClinicPageProps) {
               {clinic.phone && (
                 <div className="mb-4">
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Phone</h3>
-                  
+                  <a
                     href={`tel:${clinic.phone}`}
                     className="text-blue-600 hover:text-blue-700 font-medium"
                   >
@@ -226,7 +218,7 @@ export default async function ClinicDetailPage({ params }: ClinicPageProps) {
               {clinic.website && (
                 <div className="mb-6">
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Website</h3>
-                  
+                  <a
                     href={clinic.website}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -240,7 +232,7 @@ export default async function ClinicDetailPage({ params }: ClinicPageProps) {
               {/* Action Buttons */}
               <div className="space-y-3">
                 {clinic.phone && (
-                  
+                  <a
                     href={`tel:${clinic.phone}`}
                     className="block w-full text-center px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
                   >
@@ -248,17 +240,19 @@ export default async function ClinicDetailPage({ params }: ClinicPageProps) {
                   </a>
                 )}
 
-                
-                  href={clinic.google_maps_uri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block w-full text-center px-4 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  📍 Get Directions
-                </a>
+                {clinic.google_maps_uri && (
+                  <a
+                    href={clinic.google_maps_uri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full text-center px-4 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    📍 Get Directions
+                  </a>
+                )}
 
                 {clinic.website && (
-                  
+                  <a
                     href={clinic.website}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -275,7 +269,7 @@ export default async function ClinicDetailPage({ params }: ClinicPageProps) {
               <h2 className="text-xl font-bold text-gray-900 mb-2">Location</h2>
               <p className="text-gray-600 mb-3">View on Google Maps for directions.</p>
               {clinic.google_maps_uri && (
-                
+                <a
                   href={clinic.google_maps_uri}
                   target="_blank"
                   rel="noopener noreferrer"
