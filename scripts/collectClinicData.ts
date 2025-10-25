@@ -45,6 +45,9 @@ const STATES = [
   'OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'
 ];
 
+// ✅ Valid US states set for validation
+const VALID_US_STATES = new Set(STATES);
+
 // ---- Throttling & safety (env-driven) ----
 const QPS = Number(process.env.PLACES_QPS || 3);
 const NEXT_PAGE_DELAY_MS = Number(process.env.PLACES_NEXT_PAGE_DELAY_MS || 1200);
@@ -57,6 +60,10 @@ const MAX_CLINICS_PER_STATE = Number(process.env.PLACES_MAX_CLINICS_PER_STATE ||
 const MAX_CLINICS_GLOBAL = Number(process.env.PLACES_MAX_CLINICS_GLOBAL || 0);
 let GLOBAL_CLINICS = 0;
 
+// Tracking rejected clinics for debugging
+let REJECTED_NON_US = 0;
+let REJECTED_NON_DERM = 0;
+
 async function gate() {
   REQUESTS++;
   await SLEEP(Math.ceil(1000 / QPS));
@@ -64,12 +71,12 @@ async function gate() {
 
 // ---- Small utils ----
 function pick(obj: any, keys: string[]) {
-
   const o: any = {};
   for (const k of keys) o[k] = obj?.[k] ?? null;
   return o;
 }
 
+// ✅ Enhanced to include country_code
 function fromAddressComponents(components: any[]) {
   const get = (t: string) => components?.find((c: any) => c.types?.includes(t));
 
@@ -77,19 +84,34 @@ function fromAddressComponents(components: any[]) {
     state_code: get('administrative_area_level_1')?.shortText ?? null,
     city: get('locality')?.longText ?? get('postal_town')?.longText ?? null,
     postal_code: get('postal_code')?.longText ?? null,
+    country_code: get('country')?.shortText ?? null, // ✅ Added country
   };
 }
 
-
-// ---- Enhanced dermatology filtering ----
+// ---- Enhanced dermatology filtering with US validation ----
 function acceptByDermHeuristics(p: any): boolean {
   const name = (p.displayName?.text || '').toLowerCase();
   const website = (p.websiteUri || '').toLowerCase();
   const types = (p.types || []).join(' ').toLowerCase();
   const searchText = `${name} ${website} ${types}`;
 
+  // ✅ RULE 0: Validate it's in a US state FIRST
+  const addressComponents = p.addressComponents ?? [];
+  const ac = fromAddressComponents(addressComponents);
   
-  // RULE 1: Exclude obvious non-derm places first
+  // Reject if not US country
+  if (ac.country_code && ac.country_code !== 'US') {
+    REJECTED_NON_US++;
+    return false;
+  }
+  
+  // Reject if no valid US state code
+  if (!ac.state_code || !VALID_US_STATES.has(ac.state_code)) {
+    REJECTED_NON_US++;
+    return false;
+  }
+  
+  // RULE 1: Exclude obvious non-derm places
   const excludeTerms = [
     'dental', 'dentist', 'orthodont', 'oral surgery',
     'veterinary', 'animal clinic', 'pet clinic',
@@ -98,6 +120,7 @@ function acceptByDermHeuristics(p: any): boolean {
   
   for (const term of excludeTerms) {
     if (searchText.includes(term)) {
+      REJECTED_NON_DERM++;
       return false;
     }
   }
@@ -151,13 +174,19 @@ function acceptByDermHeuristics(p: any): boolean {
       searchText.includes('beauty supply') ||
       searchText.includes('cosmetics store');
     
-    return !isStore;
+    if (isStore) {
+      REJECTED_NON_DERM++;
+      return false;
+    }
+    return true;
   }
   
   // RULE 6: Reject everything else
+  REJECTED_NON_DERM++;
   return false;
 }
 
+// ✅ Enhanced with location bias for US geographic bounds
 async function searchTextOnce(query: string, pageToken?: string) {
   await gate();
 
@@ -165,7 +194,20 @@ async function searchTextOnce(query: string, pageToken?: string) {
     textQuery: query, 
     pageSize: 20, 
     languageCode: 'en', 
-    regionCode: 'US' 
+    regionCode: 'US',
+    // ✅ Geographic restriction to US bounds (including Alaska & Hawaii)
+    locationBias: {
+      rectangle: {
+        low: { 
+          latitude: 18.0,      // South of Hawaii
+          longitude: -180.0    // West of Alaska (Aleutian Islands)
+        },
+        high: { 
+          latitude: 72.0,      // North of Alaska
+          longitude: -66.0     // East coast
+        }
+      }
+    }
   };
   
   if (pageToken) body.pageToken = pageToken;
@@ -184,9 +226,20 @@ async function searchTextOnce(query: string, pageToken?: string) {
   return res.json();
 }
 
-// ---- Output shape (UI-friendly) ----
+// ✅ Enhanced with US validation and null return for non-US
 function toClinic(p: any) {
   const ac = fromAddressComponents(p.addressComponents ?? []);
+  
+  // ✅ Double-check: Reject non-US clinics
+  if (ac.country_code && ac.country_code !== 'US') {
+    return null;
+  }
+  
+  // ✅ Double-check: Reject invalid state codes
+  if (!ac.state_code || !VALID_US_STATES.has(ac.state_code)) {
+    return null;
+  }
+  
   return {
     place_id: p.id ?? null,
     display_name: p.displayName?.text ?? null,
@@ -245,10 +298,14 @@ async function collectState(stateCode: string) {
 
       for (const p of places) {
         if (!acceptByDermHeuristics(p)) continue;
+        
+        const clinic = toClinic(p);
+        if (!clinic) continue; // Skip if toClinic returns null (non-US)
+        
         const id = p.id;
         if (id && !seen.has(id)) {
           seen.add(id);
-          clinics.push(toClinic(p));
+          clinics.push(clinic);
           GLOBAL_CLINICS++;
 
           // Per-state cap
@@ -294,6 +351,7 @@ async function main() {
 
   console.log(`\n▶ Collecting dermatology clinics for ${states.length} state(s) (Text Search, paginated)`);
   console.log(`   Rate: ~${QPS} QPS  |  nextPageDelay=${NEXT_PAGE_DELAY_MS}ms  |  max requests: ${MAX_REQUESTS}`);
+  console.log(`   ✅ US-only filtering: Geographic bounds + State validation`);
   if (MAX_CLINICS_PER_STATE) console.log(`   Cap per state: ${MAX_CLINICS_PER_STATE} clinics`);
   if (MAX_CLINICS_GLOBAL)     console.log(`   Global cap:    ${MAX_CLINICS_GLOBAL} clinics`);
   console.log('');
@@ -319,7 +377,8 @@ async function main() {
   }
 
   const totalCost = (REQUESTS * 0.032).toFixed(2);
-  console.log(`\n✨ Done. Total API calls: ${REQUESTS}  |  Total clinics: ${GLOBAL_CLINICS}  |  Cost: ~$${totalCost}\n`);
+  console.log(`\n✨ Done. Total API calls: ${REQUESTS}  |  Total clinics: ${GLOBAL_CLINICS}  |  Cost: ~$${totalCost}`);
+  console.log(`   📊 Rejected: ${REJECTED_NON_US} non-US | ${REJECTED_NON_DERM} non-dermatology\n`);
 }
 
 main().catch(err => {
