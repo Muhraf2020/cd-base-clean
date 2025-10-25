@@ -53,4 +53,4 @@ Thumbs.db
 !/backup-clinics/sample.json
 
 # --- OPTIONAL: Ignore the lockfile ONLY if you build locally and upload the artifact ---
-/package-lock.json
+# /package-lock.json
