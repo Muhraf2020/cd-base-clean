@@ -36,7 +36,6 @@ export default function StateGrid() {
   const loadStateCounts = async () => {
     try {
       setLoading(true);
-      // Fetch counts for each state
       const stateCounts: StateInfo[] = [];
       
       for (const [code, name] of Object.entries(US_STATES_FULL)) {
@@ -52,7 +51,6 @@ export default function StateGrid() {
         }
       }
 
-      // Sort by clinic count (descending)
       stateCounts.sort((a, b) => b.clinicCount - a.clinicCount);
       setStates(stateCounts);
     } catch (error) {
@@ -64,9 +62,9 @@ export default function StateGrid() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
         {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="bg-white rounded-lg shadow-md p-6 animate-pulse">
+          <div key={i} className="bg-white rounded-lg shadow-md p-4 sm:p-6 animate-pulse">
             <div className="h-6 bg-gray-200 rounded mb-2"></div>
             <div className="h-4 bg-gray-200 rounded w-2/3"></div>
           </div>
@@ -76,26 +74,26 @@ export default function StateGrid() {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
       {states.map((state) => (
         <Link
           key={state.code}
           href={`/clinics?state=${state.code}`}
-          className="bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 p-6 group border-2 border-blue-200 hover:border-blue-400"
+          className="bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 p-4 sm:p-6 group border-2 border-blue-200 hover:border-blue-400 active:scale-95"
         >
           <div className="flex flex-col items-center text-center">
-            <div className="text-3xl font-bold text-blue-600 mb-2 group-hover:scale-110 transition-transform">
+            <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1 sm:mb-2 group-hover:scale-110 transition-transform">
               {state.code}
             </div>
-            <div className="text-sm font-medium text-gray-700 mb-2">
+            <div className="text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2 line-clamp-2">
               {state.name}
             </div>
             <div className="flex items-center gap-1 text-xs text-gray-600">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
               </svg>
               <span className="font-semibold">{state.clinicCount}</span>
-              <span>clinics</span>
+              <span className="hidden sm:inline">clinics</span>
             </div>
           </div>
         </Link>
