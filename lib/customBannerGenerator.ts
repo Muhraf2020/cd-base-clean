@@ -17,8 +17,9 @@ const THEMES: BannerTheme[] = [
 
 /**
  * Split text into two lines intelligently at word boundaries
+ * Reduced maxCharsPerLine to prevent text overflow
  */
-function splitTextIntoLines(text: string, maxCharsPerLine: number = 35): string[] {
+function splitTextIntoLines(text: string, maxCharsPerLine: number = 28): string[] {
   if (text.length <= maxCharsPerLine) {
     return [text];
   }
@@ -51,7 +52,13 @@ function splitTextIntoLines(text: string, maxCharsPerLine: number = 35): string[
 
   // Return maximum of 2 lines
   if (lines.length > 2) {
-    lines[1] = lines[1].substring(0, maxCharsPerLine - 3) + '...';
+    // Combine remaining words into second line with ellipsis if too long
+    const remainingWords = lines.slice(1).join(' ');
+    if (remainingWords.length > maxCharsPerLine) {
+      lines[1] = remainingWords.substring(0, maxCharsPerLine - 3) + '...';
+    } else {
+      lines[1] = remainingWords;
+    }
     return [lines[0], lines[1]];
   }
 
@@ -79,17 +86,17 @@ export function generateCustomBanner(
   const pattern = getPattern(theme.pattern, color1);
 
   // Split name into lines if needed
-  const nameLines = splitTextIntoLines(clinicName, 35);
+  const nameLines = splitTextIntoLines(clinicName, 28);
   const isMultiLine = nameLines.length > 1;
 
   // Calculate positions with better spacing
-  const iconY = -40;  // Moved up slightly for more space
-  const firstLineY = isMultiLine ? 50 : 55;  // More space from icon
-  const secondLineY = 95;  // Increased spacing between lines (from 75 to 95)
-  const ratingY = isMultiLine ? 130 : 100;  // Adjusted for new spacing
+  const iconY = -40;
+  const firstLineY = isMultiLine ? 50 : 55;
+  const secondLineY = 95;
+  const ratingY = isMultiLine ? 130 : 100;
 
-  // Adjust font size for long names
-  const fontSize = isMultiLine ? 46 : 52;
+  // Adjust font size for better fit - reduced from 46/52 to 42/48
+  const fontSize = isMultiLine ? 42 : 48;
 
   const svg = `
     <svg width="1600" height="400" xmlns="http://www.w3.org/2000/svg">
