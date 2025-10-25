@@ -82,11 +82,11 @@ export function generateCustomBanner(
   const nameLines = splitTextIntoLines(clinicName, 35);
   const isMultiLine = nameLines.length > 1;
 
-  // Calculate positions based on number of lines
-  const iconY = -30;
-  const firstLineY = isMultiLine ? 40 : 50;
-  const secondLineY = 75;
-  const ratingY = isMultiLine ? 105 : 90;
+  // Calculate positions with better spacing
+  const iconY = -40;  // Moved up slightly for more space
+  const firstLineY = isMultiLine ? 50 : 55;  // More space from icon
+  const secondLineY = 95;  // Increased spacing between lines (from 75 to 95)
+  const ratingY = isMultiLine ? 130 : 100;  // Adjusted for new spacing
 
   // Adjust font size for long names
   const fontSize = isMultiLine ? 46 : 52;
