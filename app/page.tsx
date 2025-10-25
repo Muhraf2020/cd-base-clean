@@ -19,12 +19,12 @@ export default function Home() {
 
   const loadStats = async () => {
     try {
-      const response = await fetch('/api/clinics?per_page=1');
+      const response = await fetch('/api/stats');
       const data = await response.json();
       
       setStats({
-        totalClinics: data.total || 0,
-        totalStates: 50,
+        totalClinics: data.totalClinics || 0,
+        totalStates: data.totalStates || 50,
         loading: false
       });
     } catch (error) {
