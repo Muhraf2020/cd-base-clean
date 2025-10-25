@@ -249,34 +249,36 @@ function ClinicsContent() {
 
             {/* Grid or Map View */}
             {viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4 sm:gap-6">
-                {loading ? (
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="bg-white rounded-lg shadow-md p-6 animate-pulse"
-                    >
-                      <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4 sm:gap-6">
+                  {loading ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="bg-white rounded-lg shadow-md p-6 animate-pulse"
+                      >
+                        <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                        <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                      </div>
+                    ))
+                  ) : filteredClinics.length === 0 ? (
+                    <div className="col-span-full text-center py-12">
+                      <p className="text-gray-500 text-lg">
+                        No clinics found. Try adjusting your filters.
+                      </p>
                     </div>
-                  ))
-                ) : filteredClinics.length === 0 ? (
-                  <div className="col-span-full text-center py-12">
-                    <p className="text-gray-500 text-lg">
-                      No clinics found. Try adjusting your filters.
-                    </p>
-                  </div>
-                ) : (
-                  filteredClinics.slice(0, 50).map(clinic => (
-                    <ClinicCard
-                      key={clinic.place_id}
-                      clinic={clinic}
-                      onClick={() => setSelectedClinic(clinic)}
-                    />
-                  ))
-                )}
-              </div>
+                  ) : (
+                    filteredClinics.map(clinic => (
+                      <ClinicCard
+                        key={clinic.place_id}
+                        clinic={clinic}
+                        onClick={() => setSelectedClinic(clinic)}
+                      />
+                    ))
+                  )}
+                </div>
+              </>
             ) : (
               <div className="h-[500px] sm:h-[600px] lg:h-[calc(100vh-300px)] rounded-lg overflow-hidden shadow-lg">
                 <FreeMapView
@@ -286,12 +288,6 @@ function ClinicsContent() {
                 />
               </div>
             )}
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-}
 
 export default function ClinicsPage() {
   return (
