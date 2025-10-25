@@ -268,7 +268,7 @@ function ClinicsContent() {
                     </p>
                   </div>
                 ) : (
-                  filteredClinics.map(clinic => (
+                  filteredClinics.slice(0, 50).map(clinic => (
                     <ClinicCard
                       key={clinic.place_id}
                       clinic={clinic}
@@ -300,3 +300,13 @@ export default function ClinicsPage() {
     </Suspense>
   );
 }
+{filteredClinics.length > 50 && (
+ <div className="col-span-full text-center py-8">
+ <button
+ onClick={() => {/* Load more logic */}}
+ className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+ >
+   Load More ({filteredClinics.length - 50} more)
+   </button>
+   </div>
+ )}
