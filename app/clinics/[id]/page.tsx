@@ -52,8 +52,16 @@ export default async function ClinicDetailPage({ params }: ClinicPageProps) {
     notFound();
   }
 
-  const photos = clinic.photos?.slice(0, 4) || [];
-  const hasPhotos = photos.length > 0;
+  // ✅ Filter out empty/invalid photos - only show if we have valid photo names
+  const validPhotos = clinic.photos?.filter(photo => 
+    photo && 
+    photo.name && 
+    photo.name.trim() !== '' &&
+    photo.name.startsWith('places/')  // Ensure it's a valid Google Places photo reference
+  ) || [];
+  
+  const hasPhotos = validPhotos.length > 0;
+  const photos = hasPhotos ? validPhotos.slice(0, 4) : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -82,7 +90,7 @@ export default async function ClinicDetailPage({ params }: ClinicPageProps) {
           />
         </div>
 
-        {/* Additional Photos Grid */}
+        {/* Additional Photos Grid - Only show if we have valid photos */}
         {hasPhotos && (
           <div className="mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Photos</h2>
@@ -93,6 +101,10 @@ export default async function ClinicDetailPage({ params }: ClinicPageProps) {
                   src={getPhotoUrl(photo.name, 400, 300)}
                   alt={`${clinic.display_name} photo ${index + 1}`}
                   className="w-full h-48 object-cover rounded-lg hover:scale-105 transition-transform duration-200"
+                  onError={(e) => {
+                    // Hide image if it fails to load
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
               ))}
             </div>
