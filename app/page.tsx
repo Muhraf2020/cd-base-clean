@@ -1,288 +1,188 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import StateGrid from '@/components/StateGrid';
 import SearchBar from '@/components/SearchBar';
-import ClinicCard from '@/components/ClinicCard';
-// ✅ CHANGE 1: Replace MapView with FreeMapView
-import FreeMapView from '@/components/FreeMapView';  // ← Changed from MapView
-import FilterPanel from '@/components/FilterPanel';
-import MobileFilterButton from '@/components/MobileFilterButton';
-import { Clinic, FilterOptions } from '@/lib/dataTypes';
-import { calculateDistance } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const [clinics, setClinics] = useState<Clinic[]>([]);
-  const [filteredClinics, setFilteredClinics] = useState<Clinic[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
-  const [filters, setFilters] = useState<FilterOptions>({});
-  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
+  const router = useRouter();
+  const [stats, setStats] = useState({
+    totalClinics: 0,
+    totalStates: 0,
+    loading: true
+  });
 
   useEffect(() => {
-    loadClinics();
+    loadStats();
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [clinics, filters]);
-
-  const loadClinics = async () => {
+  const loadStats = async () => {
     try {
-      setLoading(true);
-      const response = await fetch('/api/clinics?per_page=5000');
+      const response = await fetch('/api/clinics?per_page=1');
       const data = await response.json();
-      const loadedClinics = data.clinics || [];
-      setClinics(loadedClinics);
-      setFilteredClinics(loadedClinics);
+      
+      setStats({
+        totalClinics: data.total || 0,
+        totalStates: 50, // You can calculate this dynamically if needed
+        loading: false
+      });
     } catch (error) {
-      console.error('Error loading clinics:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error loading stats:', error);
+      setStats(prev => ({ ...prev, loading: false }));
     }
   };
 
   const handleSearch = (query: string) => {
-    if (!query || query.trim() === '') {
-      setFilteredClinics(clinics);
-      return;
-    }
-
-    const trimmedQuery = query.trim();
-    const lowerQuery = trimmedQuery.toLowerCase();
-    const isZipCode = /^\d{5}$/.test(trimmedQuery);
-    
-    const filtered = clinics.filter(clinic => {
-      if (isZipCode) {
-        return clinic.postal_code === trimmedQuery;
-      }
-      
-      const searchableText = `
-        ${clinic.display_name || ''} 
-        ${clinic.formatted_address || ''} 
-        ${clinic.city || ''}
-        ${clinic.state_code || ''}
-        ${clinic.types?.join(' ') || ''}
-        ${clinic.primary_type || ''}
-      `.toLowerCase();
-      
-      return searchableText.includes(lowerQuery);
-    });
-
-    setFilteredClinics(filtered);
+    router.push(`/clinics?q=${encodeURIComponent(query)}`);
   };
 
   const handleLocationSearch = (lat: number, lng: number) => {
-    const clinicsWithDistance = clinics.map(clinic => ({
-      ...clinic,
-      distance: calculateDistance(
-        { lat, lng },
-        { lat: clinic.location.lat, lng: clinic.location.lng }
-      )
-    }));
-
-    const sorted = clinicsWithDistance.sort((a, b) => a.distance - b.distance);
-    setFilteredClinics(sorted);
-    console.log(`Found ${sorted.length} clinics sorted by distance from your location`);
-  };
-
-  const applyFilters = () => {
-    let filtered = [...clinics];
-
-    if (filters.rating_min) {
-      filtered = filtered.filter(c => {
-        const rating = c.rating || 0;
-        return rating >= filters.rating_min!;
-      });
-    }
-
-    if (filters.has_website) {
-      filtered = filtered.filter(c => c.website && c.website.trim() !== '');
-    }
-
-    if (filters.has_phone) {
-      filtered = filtered.filter(c => c.phone && c.phone.trim() !== '');
-    }
-
-    if (filters.wheelchair_accessible) {
-      filtered = filtered.filter(c => 
-        c.accessibility_options?.wheelchair_accessible_entrance === true
-      );
-    }
-
-    if (filters.free_parking) {
-      filtered = filtered.filter(c => 
-        c.parking_options?.free_parking_lot === true
-      );
-    }
-
-    if (filters.open_now) {
-      filtered = filtered.filter(c => {
-        return c.current_open_now === true || 
-               c.opening_hours?.open_now === true;
-      });
-    }
-
-    if (filters.states && filters.states.length > 0) {
-      filtered = filtered.filter(c => {
-        return c.state_code && filters.states?.includes(c.state_code);
-      });
-    }
-
-    if (filters.sort_by) {
-      filtered.sort((a, b) => {
-        let aVal, bVal;
-        
-        switch (filters.sort_by) {
-          case 'rating':
-            aVal = a.rating || 0;
-            bVal = b.rating || 0;
-            break;
-          case 'reviews':
-            aVal = a.user_rating_count || 0;
-            bVal = b.user_rating_count || 0;
-            break;
-          case 'name':
-            aVal = (a.display_name || '').toLowerCase();
-            bVal = (b.display_name || '').toLowerCase();
-            break;
-          default:
-            return 0;
-        }
-
-        if (filters.sort_order === 'asc') {
-          return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-        } else {
-          return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
-        }
-      });
-    }
-
-    setFilteredClinics(filtered);
+    router.push(`/clinics?lat=${lat}&lng=${lng}`);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-    <header className="bg-white shadow-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              Derm Clinics Near Me
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      {/* Hero Section */}
+      <header className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <div className="text-center">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4">
+              Find Dermatology Clinics Near You
             </h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Find dermatology clinics across the USA
+            <p className="text-xl sm:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto">
+              Your comprehensive directory of dermatology clinics across the United States
             </p>
           </div>
-    
-          {/* View Toggle */}
-          <div className="flex gap-2 w-full sm:w-auto">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`px-4 py-2 rounded-lg transition ${
-                viewMode === 'grid'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Grid View
-            </button>
-            <button
-              onClick={() => setViewMode('map')}
-              className={`px-4 py-2 rounded-lg transition ${
-                viewMode === 'map'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Map View
-            </button>
-          </div>
         </div>
-    
-        {/* Search Bar */}
-        <div className="mt-4 w-full">
+      </header>
+
+      {/* Sticky Search Bar */}
+      <div className="sticky top-0 z-50 bg-white shadow-md">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <SearchBar
             onSearch={handleSearch}
             onLocationSearch={handleLocationSearch}
           />
         </div>
       </div>
-    </header>
 
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-6">
-          {/* Filters Sidebar */}
-          <aside className="w-64 flex-shrink-0 hidden lg:block">
-            <FilterPanel filters={filters} onFilterChange={setFilters} />
-          </aside>
-          {/* Mobile Filter Button */}
-          <MobileFilterButton
-            filters={filters}
-            onFilterChange={setFilters}
-            resultCount={filteredClinics.length}
-          />
-
-          {/* Results */}
-          <div className="flex-1">
-            {/* Results Header */}
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
-                {loading ? 'Loading...' : `${filteredClinics.length} clinics found`}
-              </h2>
+      {/* Stats Section */}
+      <section className="py-12 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Total Clinics */}
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-8 text-center border-2 border-blue-200">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <div className="text-4xl font-bold text-blue-600 mb-2">
+                {stats.loading ? '...' : stats.totalClinics.toLocaleString()}
+              </div>
+              <div className="text-gray-700 font-medium">Dermatology Clinics</div>
             </div>
 
-            {/* Grid or Map View */}
-            {viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4 sm:gap-6">
-                {loading ? (
-                  // Loading skeletons
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="bg-white rounded-lg shadow-md p-6 animate-pulse"
-                    >
-                      <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                    </div>
-                  ))
-                ) : filteredClinics.length === 0 ? (
-                  <div className="col-span-full text-center py-12">
-                    <p className="text-gray-500 text-lg">
-                      No clinics found. Try adjusting your filters.
-                    </p>
-                  </div>
-                ) : (
-                  filteredClinics.map(clinic => (
-                    <ClinicCard
-                      key={clinic.place_id}
-                      clinic={clinic}
-                      onClick={() => setSelectedClinic(clinic)}
-                    />
-                  ))
-                )}
+            {/* Total States */}
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-lg p-8 text-center border-2 border-green-200">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-full mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
               </div>
-            ) : (
-              // ✅ CHANGE 2: Replace MapView with FreeMapView here
-              <div className="h-[500px] sm:h-[600px] lg:h-[calc(100vh-300px)] rounded-lg overflow-hidden shadow-lg">
-                <FreeMapView
-                  clinics={filteredClinics}
-                  selectedClinic={selectedClinic}
-                  onClinicSelect={setSelectedClinic}
-                />
+              <div className="text-4xl font-bold text-green-600 mb-2">
+                {stats.totalStates}
               </div>
-            )}
+              <div className="text-gray-700 font-medium">States Covered</div>
+            </div>
+
+            {/* Verified Info */}
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-lg p-8 text-center border-2 border-purple-200">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-full mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="text-4xl font-bold text-purple-600 mb-2">
+                100%
+              </div>
+              <div className="text-gray-700 font-medium">Verified Information</div>
+            </div>
           </div>
         </div>
-      </main>
+      </section>
+
+      {/* About Section */}
+      <section className="py-12 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              About Derm Clinics Near Me
+            </h2>
+            <p className="text-lg text-gray-600 leading-relaxed">
+              We provide a comprehensive, up-to-date directory of dermatology clinics across the United States. 
+              Whether you're looking for general dermatology care, cosmetic procedures, or specialized skin treatments, 
+              our directory helps you find qualified dermatologists in your area.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div className="bg-white rounded-lg shadow-md p-6 text-center">
+              <div className="text-blue-600 text-4xl mb-3">🔍</div>
+              <h3 className="font-semibold text-gray-900 mb-2">Easy Search</h3>
+              <p className="text-sm text-gray-600">
+                Find clinics by state, city, or ZIP code
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6 text-center">
+              <div className="text-green-600 text-4xl mb-3">⭐</div>
+              <h3 className="font-semibold text-gray-900 mb-2">Verified Ratings</h3>
+              <p className="text-sm text-gray-600">
+                Real patient reviews and ratings
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6 text-center">
+              <div className="text-purple-600 text-4xl mb-3">📍</div>
+              <h3 className="font-semibold text-gray-900 mb-2">Detailed Info</h3>
+              <p className="text-sm text-gray-600">
+                Hours, contact info, and directions
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6 text-center">
+              <div className="text-orange-600 text-4xl mb-3">♿</div>
+              <h3 className="font-semibold text-gray-900 mb-2">Accessibility</h3>
+              <p className="text-sm text-gray-600">
+                Filter by accessibility features
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* States Grid Section */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              Browse Clinics by State
+            </h2>
+            <p className="text-lg text-gray-600">
+              Select your state to find dermatology clinics near you
+            </p>
+          </div>
+
+          <StateGrid />
+        </div>
+      </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white mt-8 sm:mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
+      <footer className="bg-gray-900 text-white mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
             <div>
               <h3 className="text-lg font-semibold mb-4">About</h3>
               <p className="text-gray-400 text-sm">
