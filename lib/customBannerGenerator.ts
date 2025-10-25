@@ -16,6 +16,49 @@ const THEMES: BannerTheme[] = [
 ];
 
 /**
+ * Split text into two lines intelligently at word boundaries
+ */
+function splitTextIntoLines(text: string, maxCharsPerLine: number = 35): string[] {
+  if (text.length <= maxCharsPerLine) {
+    return [text];
+  }
+
+  // Try to split at a word boundary near the middle
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    
+    if (testLine.length <= maxCharsPerLine) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        // Single word is too long, force split
+        lines.push(word.substring(0, maxCharsPerLine - 3) + '...');
+        currentLine = '';
+      }
+    }
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  // Return maximum of 2 lines
+  if (lines.length > 2) {
+    lines[1] = lines[1].substring(0, maxCharsPerLine - 3) + '...';
+    return [lines[0], lines[1]];
+  }
+
+  return lines;
+}
+
+/**
  * Generate a custom banner with clinic name, rating, and optional favicon
  */
 export function generateCustomBanner(
@@ -35,8 +78,18 @@ export function generateCustomBanner(
   // Get pattern based on theme
   const pattern = getPattern(theme.pattern, color1);
 
-  // Truncate long names
-  const displayName = truncateText(clinicName, 40);
+  // Split name into lines if needed
+  const nameLines = splitTextIntoLines(clinicName, 35);
+  const isMultiLine = nameLines.length > 1;
+
+  // Calculate positions based on number of lines
+  const iconY = -30;
+  const firstLineY = isMultiLine ? 40 : 50;
+  const secondLineY = 75;
+  const ratingY = isMultiLine ? 105 : 90;
+
+  // Adjust font size for long names
+  const fontSize = isMultiLine ? 46 : 52;
 
   const svg = `
     <svg width="1600" height="400" xmlns="http://www.w3.org/2000/svg">
@@ -71,40 +124,53 @@ export function generateCustomBanner(
       <g transform="translate(800, 200)">
         ${faviconUrl ? `
           <!-- Favicon circle with shadow -->
-          <circle cx="0" cy="-30" r="52" fill="rgba(0,0,0,0.1)" />
-          <circle cx="0" cy="-32" r="52" fill="rgba(255,255,255,0.2)" />
-          <circle cx="0" cy="-32" r="46" fill="white" filter="url(#shadow)" />
+          <circle cx="0" cy="${iconY - 2}" r="52" fill="rgba(0,0,0,0.1)" />
+          <circle cx="0" cy="${iconY}" r="52" fill="rgba(255,255,255,0.2)" />
+          <circle cx="0" cy="${iconY}" r="46" fill="white" filter="url(#shadow)" />
           
           <!-- Favicon placeholder (if loading fails) -->
-          <text x="0" y="-20" text-anchor="middle" 
+          <text x="0" y="${iconY + 12}" text-anchor="middle" 
                 font-family="Arial, sans-serif" font-size="40" fill="${color1}">
             🏥
           </text>
         ` : `
           <!-- Default medical icon with shadow -->
-          <circle cx="0" cy="-30" r="52" fill="rgba(0,0,0,0.1)" />
-          <circle cx="0" cy="-32" r="52" fill="rgba(255,255,255,0.2)" />
-          <circle cx="0" cy="-32" r="46" fill="white" filter="url(#shadow)" />
-          <text x="0" y="-20" text-anchor="middle" 
+          <circle cx="0" cy="${iconY - 2}" r="52" fill="rgba(0,0,0,0.1)" />
+          <circle cx="0" cy="${iconY}" r="52" fill="rgba(255,255,255,0.2)" />
+          <circle cx="0" cy="${iconY}" r="46" fill="white" filter="url(#shadow)" />
+          <text x="0" y="${iconY + 12}" text-anchor="middle" 
                 font-family="Arial, sans-serif" font-size="40">
             🏥
           </text>
         `}
         
-        <!-- Clinic name - centered -->
-        <text x="0" y="50" 
+        <!-- Clinic name - centered (first line) -->
+        <text x="0" y="${firstLineY}" 
               text-anchor="middle"
               font-family="Arial, Helvetica, sans-serif" 
-              font-size="52" 
+              font-size="${fontSize}" 
               font-weight="bold" 
               fill="white"
               filter="url(#shadow)">
-          ${escapeXml(displayName)}
+          ${escapeXml(nameLines[0])}
         </text>
+        
+        ${isMultiLine ? `
+          <!-- Clinic name - second line -->
+          <text x="0" y="${secondLineY}" 
+                text-anchor="middle"
+                font-family="Arial, Helvetica, sans-serif" 
+                font-size="${fontSize}" 
+                font-weight="bold" 
+                fill="white"
+                filter="url(#shadow)">
+            ${escapeXml(nameLines[1])}
+          </text>
+        ` : ''}
         
         ${rating ? `
           <!-- Rating badge - centered -->
-          <g transform="translate(0, 90)">
+          <g transform="translate(0, ${ratingY})">
             <!-- Badge background with shadow -->
             <rect x="-65" y="-2" width="130" height="40" rx="20" 
                   fill="rgba(0,0,0,0.1)" />
