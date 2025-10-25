@@ -119,44 +119,55 @@ export default function SearchBar({ onSearch, onLocationSearch }: SearchBarProps
         </div>
       </div>
 
-      {/* Quick Filters - Mobile Optimized */}
-      <div className="flex flex-wrap gap-2 mt-3 overflow-x-auto pb-1">
+      {/* Quick Filters - Compact Single Line on Mobile */}
+      <div className="flex gap-1.5 sm:gap-2 mt-2 sm:mt-3 overflow-x-auto scrollbar-hide">
         <button
           type="button"
           onClick={() => handleQuickFilter('')}
-          className="px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0"
+          className="px-2 sm:px-3 py-1 text-[10px] sm:text-xs bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0"
         >
-          All Clinics
+          All
         </button>
         <button
           type="button"
           onClick={() => handleQuickFilter('acne')}
-          className="px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0"
+          className="px-2 sm:px-3 py-1 text-[10px] sm:text-xs bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0"
         >
-          Acne Treatment
+          Acne
         </button>
         <button
           type="button"
           onClick={() => handleQuickFilter('cosmetic')}
-          className="px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0"
+          className="px-2 sm:px-3 py-1 text-[10px] sm:text-xs bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0"
         >
           Cosmetic
         </button>
         <button
           type="button"
           onClick={() => handleQuickFilter('pediatric')}
-          className="px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0"
+          className="px-2 sm:px-3 py-1 text-[10px] sm:text-xs bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0"
         >
           Pediatric
         </button>
         <button
           type="button"
           onClick={() => handleQuickFilter('skin cancer')}
-          className="px-3 py-1.5 text-xs sm:text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0"
+          className="px-2 sm:px-3 py-1 text-[10px] sm:text-xs bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors whitespace-nowrap flex-shrink-0"
         >
           Skin Cancer
         </button>
       </div>
+
+      {/* Hide scrollbar on mobile */}
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </form>
   );
 }
