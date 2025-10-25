@@ -177,6 +177,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const state = searchParams.get('state');
     const city = searchParams.get('city');
+    const q = searchParams.get('q');
     const page = parseInt(searchParams.get('page') || '1');
     const perPage = parseInt(searchParams.get('per_page') || '500');
 
@@ -195,6 +196,11 @@ export async function GET(request: Request) {
     // Filter by city
     if (city) {
       query = query.ilike('city', `%${city}%`);
+    }
+
+    // Search query (name or address)
+    if (q) {
+      query = query.or(`display_name.ilike.%${q}%,formatted_address.ilike.%${q}%`);
     }
 
     // Pagination
